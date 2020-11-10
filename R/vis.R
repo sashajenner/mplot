@@ -42,9 +42,9 @@
 #'   Murray, K., Heritier, S. and Mueller, S. (2013), Graphical
 #'   tools for model selection in generalized linear models.
 #'   Statistics in Medicine, 32:4438-4451. doi: 10.1002/sim.5855
-#'   
-#'   Tarr G, Mueller S and Welsh AH (2018). mplot: An R Package for 
-#'   Graphical Model Stability and Variable Selection Procedures. 
+#'
+#'   Tarr G, Mueller S and Welsh AH (2018). mplot: An R Package for
+#'   Graphical Model Stability and Variable Selection Procedures.
 #'   Journal of Statistical Software, 83(9), pp. 1-28. doi: 10.18637/jss.v083.i09
 #' @export
 #' @import foreach
@@ -95,7 +95,7 @@ vis = function(mf,
     }
     redundant <- FALSE
   }
-  
+
   set.seed(seed)
   m <- mextract(mf,
                 screen = screen,
@@ -108,17 +108,17 @@ vis = function(mf,
   kf <- m$k
   n <- m$n
   n.obs <- n
-  
+
   initial.weights = m$wts
   if (missing(nvmax))
     nvmax = kf
   if (nbest == "all") {
     if(kf > 15) {
-      cat('\nUsing nbest = "all" is not currently allowed when the full\nmodel has more than 15 variables.  Defaulting to nbest = 1 
+      cat('\nUsing nbest = "all" is not currently allowed when the full\nmodel has more than 15 variables.  Defaulting to nbest = 1
           \n')
       nbest = 1
     } else {
-      nbest = 2 ^ (kf - 1) 
+      nbest = 2 ^ (kf - 1)
     }
     # nbest needs to be whole model space because
     # bestglm takes option TopModels which is the
@@ -134,7 +134,7 @@ vis = function(mf,
   if (!is.numeric(nbest)) {
     stop("nbest should be numeric or 'all'")
   }
-  
+
   add.intercept.row = function(em, rs.which, rs.stats) {
     # add an intercept row
     rs.which = rbind(c(1, rep(0, dim(rs.which)[2] - 1)), rs.which)
@@ -159,13 +159,13 @@ vis = function(mf,
     rs.stats = rbind(c(logLikelihood, ress, bic, cp, rsq, adjr2, i), rs.stats)
     return(cbind(rs.which, rs.stats))
   }
-  
+
   ## Initial single pass
   ## (gives the minimum envelopping set of models)
   if (any(class(mf) == "glm") == TRUE & !use.glmulti) {
     stop(!("bestglm" %in% rownames(installed.packages())))
     # no redundant variable
-    # Xy = X 
+    # Xy = X
     # Xy$REDUNDANT.VARIABLE = NULL # do want to keep it in
     em = bestglm::bestglm(
       Xy = X,
@@ -189,7 +189,7 @@ vis = function(mf,
     # -(n/2) * log(sum(resid(ans)^2)/n) is used
     # note the bic in bestglm is calculated as:
     # -2*rs.all$logLikelihood + log(n)*(rs.all$k-1)
-  } 
+  }
   if (any(class(mf) == "glm") == TRUE & use.glmulti) {
     glmulti.trans = function(x) {
       form.list = lapply(x@formulas, all.vars)
@@ -201,7 +201,7 @@ vis = function(mf,
     }
     mf <<- mf
     initial.weights <<- initial.weights
-    
+
     dryrun = glmulti::glmulti(
       stats::formula(mf),
       level = 1,
@@ -215,11 +215,11 @@ vis = function(mf,
       family = stats::family(mf)[[1]],
       weights = mf$initial.weights
     )
-    
+
     dryrun <<- as.numeric(dryrun)
-    
+
     n = stats::nobs(mf)
-    
+
     em = glmulti::glmulti(
       stats::formula(mf),
       data = stats::model.frame(mf),
@@ -242,7 +242,7 @@ vis = function(mf,
     rs.all$bic = -2 * rs.all$logLikelihood +  log(n) * (rs.temp$k)# -2*rs.all$logLikelihood + rs.temp$k*log(n)
     rs.all$aic = -2 * rs.all$logLikelihood +  2 * (rs.temp$k) #rs.temp$aic
     rs.all$k = rs.temp$k
-  } 
+  }
   if(any(class(mf)=="lm") & length(class(mf))==1) {
     wts = initial.weights
     em = leaps::regsubsets(
@@ -269,7 +269,7 @@ vis = function(mf,
     # note that the BIC in leaps (and add.intercept.row funtion)
     # differs from the bestglm BIC buy a constant
   }
-  
+
   if (use.glmulti) {
     nms = base::all.vars(stats::formula(mf))
     nms = nms[nms != yname]
@@ -290,26 +290,26 @@ vis = function(mf,
   nm = gsub(pattern = "REDUNDANT.VARIABLE", "RV", x = nm)
   res.single.pass = base::data.frame(base::data.matrix(rs.all))
   res.single.pass$name = nm
-  
+
   # Bootstrap run -----------------------------------------------------------
-  
+
   if (missing(cores))
     cores = max(detectCores() - 1, 1)
   cl.visB = parallel::makeCluster(cores)
   doParallel::registerDoParallel(cl.visB)
   if (any(class(mf) == "glm") == TRUE & !use.glmulti) {
-    
+
     stop(!("bestglm" %in% rownames(installed.packages())))
-    
+
     res = foreach::foreach(
-      b = 1:B, 
+      b = 1:B,
       .packages = c("bestglm"),
       .options.RNG = seed #,
       # .export = c("n.obs") # don't seem to need to export this
       # and get a warning when we do
       ) %dorng% {
         wts = stats::rexp(n = n.obs, rate = 1) * initial.weights
-        
+
         em = bestglm::bestglm(
           Xy = X,
           family = fam,
@@ -330,14 +330,14 @@ vis = function(mf,
         # -2*rs.all$logLikelihood + log(n)*(rs.all$k-1)
       }
   } else if (any(class(mf) == "glm") == TRUE & use.glmulti) {
-    res = foreach(b = 1:B, 
+    res = foreach(b = 1:B,
                   .packages = c("glmulti", "dplyr"),
                   .options.RNG=seed) %dorng% {
                     mf <<- mf
                     initial.weights <<- initial.weights
                     n.obs <<- n.obs
                     dryrun <<- dryrun
-                    
+
                     em <-
                       glmulti::glmulti(
                         stats::formula(mf),
@@ -361,7 +361,7 @@ vis = function(mf,
                         weights = I(stats::rexp(n = n.obs, rate = 1) *
                                       initial.weights)
                       )
-                    
+
                     rs.temp = glmulti.trans(em)
                     var.order = all.vars(stats::formula(mf))
                     rs.all = rs.temp[, var.order]
@@ -372,10 +372,10 @@ vis = function(mf,
                     rs.all = dplyr::filter(dplyr::group_by(rs.all, k),
                                            logLikelihood == max(logLikelihood))
                     rs.all = base::data.frame(base::data.matrix(rs.all))
-                    
+
                   }
   } else {
-    res = foreach(b = 1:B, 
+    res = foreach(b = 1:B,
                   .packages = c("leaps"),
                   .options.RNG = seed# ,
                   # .export = c("n.obs") # don't seem to need to export this
@@ -408,12 +408,12 @@ vis = function(mf,
                   }
   }
   parallel::stopCluster(cl.visB)
-  
+
   ### Variable inclusion Plot Calculations
   if (missing(lambda.max))
     lambda.max = 2 * log(n)
   lambdas = seq(0, lambda.max, 0.01)
-  
+
   if (use.glmulti) {
     nms = base::all.vars(stats::formula(mf))
     nms = nms[nms != yname]
@@ -421,10 +421,10 @@ vis = function(mf,
   } else {
     real.k = kf
   }
-  
+
   var.in = matrix(NA, ncol = real.k, nrow = length(lambdas))
   colnames(var.in) = colnames(res[[1]][1:real.k])
-  
+
   rownames(var.in) = lambdas
   for (i in 1:length(lambdas)) {
     resl = lapply(res, function(x)
@@ -440,7 +440,7 @@ vis = function(mf,
     )
     var.in[i, ] = rowSums(temp.best)
   }
-  
+
   #### lvk where bubbles reflect frequencey of choice
   best.within.size = function(x) {
     rankings.within.size = unlist(stats::aggregate(-2 * x$logLikelihood, rank, by =
@@ -448,9 +448,9 @@ vis = function(mf,
     return(x[rankings.within.size == 1, ])
   }
   res.best = lapply(res, best.within.size)
-  
+
   res.df = do.call(rbind.data.frame, res.best)
-  
+
   if (use.glmulti) {
     res.df = dplyr::group_by(res.df, k)
     res.df = dplyr::count_(res.df, vars = nms)
@@ -463,8 +463,8 @@ vis = function(mf,
     res.df$name = NA
     res.df$k = rowSums(res.df[, 1:real.k])
   }
-  
-  
+
+
   # iterate over all required models on the original date
   # to obtain logLiks (in future could extract other stats)
   for (i in 1:dim(res.df)[1]) {
@@ -505,9 +505,9 @@ vis = function(mf,
     nm = gsub(pattern = "REDUNDANT.VARIABLE", "RV", x = nm)
     res.df$name[i] = nm
   }
-  
+
   res.df = res.df[with(res.df, order(k, -freq)), ]
-  
+
   output = list(
     res.df = res.df,
     res.single.pass = res.single.pass,
@@ -519,7 +519,7 @@ vis = function(mf,
     mf = mf,
     use.glmulti = use.glmulti
   )
-  
+
   class(output) = "vis"
   return(output)
 }
@@ -628,9 +628,9 @@ vis = function(mf,
 #'   Murray, K., Heritier, S. and Mueller, S. (2013), Graphical
 #'   tools for model selection in generalized linear models.
 #'   Statistics in Medicine, 32:4438-4451. doi: 10.1002/sim.5855
-#'   
-#'   Tarr G, Mueller S and Welsh AH (2018). mplot: An R Package for 
-#'   Graphical Model Stability and Variable Selection Procedures. 
+#'
+#'   Tarr G, Mueller S and Welsh AH (2018). mplot: An R Package for
+#'   Graphical Model Stability and Variable Selection Procedures.
 #'   Journal of Statistical Software, 83(9), pp. 1-28. doi: 10.18637/jss.v083.i09
 #' @export
 #' @examples
@@ -687,14 +687,14 @@ plot.vis = function(x,
                     seed = NULL,
                     ...) {
   # reproducible jitter?
-  if(!is.null(seed)) { 
+  if(!is.null(seed)) {
     set.seed(seed)
   }
   # to prevent the notes:
   # plot.vis: no visible binding for global variable k
   # plot.vis: no visible binding for global variable logLikelihood
   k = logLikelihood = NULL
-  
+
   if (backgroundColor == "transparent") {
     backgroundColor = "{stroke:null, fill:'null', strokeSize: 0}"
   } else {
@@ -705,11 +705,11 @@ plot.vis = function(x,
   }
   if (!is.null(classic))
     interactive = !classic
-  
+
   #backwards compatability for use.glmulti
   if(!exists("x$use.glmulti"))
     x$use.glmulti = FALSE
-  
+
   if (missing(highlight)) {
     # highlight first variable in the coefficient list
     if (x$use.glmulti) {
@@ -719,15 +719,18 @@ plot.vis = function(x,
       highlight = x$mextract$exp.vars[1]
       vars = make.names(x$mextract$exp.vars)
     }
+    to_highlight = TRUE
   } else {
     vars = highlight
+    to_highlight = !isFALSE(vars[1])
   }
+
   if ("lvk" %in% which) {
     var.ident = n.var.ident = NA
     lvk.dat = data.frame(x$res.single.pass)
     if(is.numeric(nbest)){
-      lvk.dat = lvk.dat %>% 
-        dplyr::group_by(k) %>% 
+      lvk.dat = lvk.dat %>%
+        dplyr::group_by(k) %>%
         dplyr::top_n(n = nbest, wt = logLikelihood)
     }
     #m2ll = -2 * lvk.dat$logLikelihood
@@ -738,62 +741,93 @@ plot.vis = function(x,
     if (!interactive) {
       # for (i in 1:length(vars)) {
       #lvk.dat = x$res.single.pass
-      lvk.dat$kj = lvk.dat$k + (unlist(lvk.dat[, vars[1]]) - 0.5) / 4
-      lvk.dat[, vars[1]] = as.logical(unlist(lvk.dat[, vars[1]]))
-      
-      p = ggplot2::ggplot(data = lvk.dat, ggplot2::aes_string(x = "kj", y = "m2ll")) +
-        ggplot2::geom_jitter(
-          ggplot2::aes_string(color = vars[1]),
-          shape = 19,
-          width = jitterk,
-          size = 2
-        ) +
-        ggplot2::theme_bw(base_size = 14) +
-        ggplot2::ylab("-2*Log-likelihood") +
-        ggplot2::xlab("Number of parameters") +
-        ggplot2::theme(
-          legend.title = ggplot2::element_blank(),
-          legend.key = ggplot2::element_blank(),
-          legend.position = legend.position
-        ) +
-        ggplot2::scale_fill_manual(values = ggplot2::alpha(c("blue", "red"), .4)) +
-        ggplot2::scale_color_manual(values = ggplot2::alpha(c("blue", "red"), .4),
-                                    labels = paste(c("Without", "With"), vars[1])) +
-        ggplot2::guides(fill = ggplot2::guide_legend(override.aes = list(
-          shape = 22,
-          size = 5,
-          fill = ggplot2::alpha(c("blue", "red"), .4)
-        )))
-      
-      if (!missing(ylim))
-        p = p + ggplot2::ylim(ylim[1], ylim[2])
-      
-      return(p)
-      
-      # col_high = grDevices::rgb(1, 0, 0, alpha = 0)
-      # col_nohigh = grDevices::rgb(0, 0, 1, alpha = 0.5)
-      # colbg = grDevices::rgb(1, 0, 0, alpha = 0.5)
-      # var.ident = which(x$res.single.pass[,vars[i]] == 1)
-      # n.var.ident = which(x$res.single.pass[,vars[i]] == 0)
-      # graphics::par(mar = c(3.4,3.4,0.1,0.1),mgp = c(2.0, 0.75, 0))
-      # if (missing(ylim)) ylim = c(min(m2ll),max(m2ll))
-      # graphics::plot(m2ll[n.var.ident] ~ lvk.dat$spk[n.var.ident],
-      #                pch = 19, cex = 1.3, col = col_nohigh,
-      #                bg = colbg,
-      #                xlab = "Number of parameters",
-      #                ylab = "-2*Log-likelihood",
-      #                ylim = ylim,
-      #                xlim = c(min(lvk.dat$spk),max(lvk.dat$spk)))
-      # graphics::points(m2ll[var.ident] ~ lvk.dat$spk[var.ident],
-      #                  pch = 24, bg = colbg,
-      #                  col = col_high, cex = 1.2)
-      # graphics::legend("topright",legend = c(paste("With",vars[i]),paste("Without",vars[i])),
-      #                  col = c(col_high,col_nohigh),
-      #                  pt.bg = colbg, pch = c(24,19))
-      #  if (length(vars) > 1) {
-      #    graphics::par(ask = TRUE)
-      # }
-      # }
+
+      if (to_highlight) {
+        lvk.dat$kj = lvk.dat$k + (unlist(lvk.dat[, vars[1]]) - 0.5) / 4
+        lvk.dat[, vars[1]] = as.logical(unlist(lvk.dat[, vars[1]]))
+
+        p = ggplot2::ggplot(data = lvk.dat, ggplot2::aes_string(x = "kj", y = "m2ll")) +
+          ggplot2::geom_jitter(
+            ggplot2::aes_string(color = vars[1]),
+            shape = 19,
+            width = jitterk,
+            size = 2
+          ) +
+          ggplot2::theme_bw(base_size = 14) +
+          ggplot2::ylab("-2*Log-likelihood") +
+          ggplot2::xlab("Number of parameters") +
+          ggplot2::theme(
+            legend.title = ggplot2::element_blank(),
+            legend.key = ggplot2::element_blank(),
+            legend.position = legend.position
+          ) +
+          ggplot2::scale_fill_manual(values = ggplot2::alpha(c("blue", "red"), .4)) +
+          ggplot2::scale_color_manual(values = ggplot2::alpha(c("blue", "red"), .4),
+                                      labels = paste(c("Without", "With"), vars[1])) +
+          ggplot2::guides(fill = ggplot2::guide_legend(override.aes = list(
+            shape = 22,
+            size = 5,
+            fill = ggplot2::alpha(c("blue", "red"), .4)
+          )))
+
+        if (!missing(ylim))
+          p = p + ggplot2::ylim(ylim[1], ylim[2])
+
+        return(p)
+
+        # col_high = grDevices::rgb(1, 0, 0, alpha = 0)
+        # col_nohigh = grDevices::rgb(0, 0, 1, alpha = 0.5)
+        # colbg = grDevices::rgb(1, 0, 0, alpha = 0.5)
+        # var.ident = which(x$res.single.pass[,vars[i]] == 1)
+        # n.var.ident = which(x$res.single.pass[,vars[i]] == 0)
+        # graphics::par(mar = c(3.4,3.4,0.1,0.1),mgp = c(2.0, 0.75, 0))
+        # if (missing(ylim)) ylim = c(min(m2ll),max(m2ll))
+        # graphics::plot(m2ll[n.var.ident] ~ lvk.dat$spk[n.var.ident],
+        #                pch = 19, cex = 1.3, col = col_nohigh,
+        #                bg = colbg,
+        #                xlab = "Number of parameters",
+        #                ylab = "-2*Log-likelihood",
+        #                ylim = ylim,
+        #                xlim = c(min(lvk.dat$spk),max(lvk.dat$spk)))
+        # graphics::points(m2ll[var.ident] ~ lvk.dat$spk[var.ident],
+        #                  pch = 24, bg = colbg,
+        #                  col = col_high, cex = 1.2)
+        # graphics::legend("topright",legend = c(paste("With",vars[i]),paste("Without",vars[i])),
+        #                  col = c(col_high,col_nohigh),
+        #                  pt.bg = colbg, pch = c(24,19))
+        #  if (length(vars) > 1) {
+        #    graphics::par(ask = TRUE)
+        # }
+        # }
+
+      } else {
+        lvk.dat$kj = lvk.dat$k# + (unlist(lvk.dat) - 0.5) / 4
+
+        p = ggplot2::ggplot(data = lvk.dat, ggplot2::aes_string(x = "kj", y = "m2ll")) +
+          ggplot2::geom_jitter(
+            shape = 19,
+            width = jitterk,
+            size = 2
+          ) +
+          ggplot2::theme_bw(base_size = 14) +
+          ggplot2::ylab("-2*Log-likelihood") +
+          ggplot2::xlab("Number of parameters") +
+          ggplot2::theme(
+            legend.title = ggplot2::element_blank(),
+            legend.key = ggplot2::element_blank(),
+            legend.position = legend.position
+          ) +
+          ggplot2::guides(fill = ggplot2::guide_legend(override.aes = list(
+            shape = 22,
+            size = 5
+          )))
+
+        if (!missing(ylim))
+          p = p + ggplot2::ylim(ylim[1], ylim[2])
+
+        return(p)
+      }
+
     } else {
       # googleVis version
       var.ident = which(lvk.dat[, vars[1]] == 1)
@@ -841,7 +875,7 @@ plot.vis = function(x,
       } else {
         use.options = options
       }
-      fplot = googleVis::gvisScatterChart(data = dat, 
+      fplot = googleVis::gvisScatterChart(data = dat,
                                           options = use.options)
       if (shiny) {
         return(fplot)
@@ -1016,10 +1050,10 @@ plot.vis = function(x,
                               ))
       lwds = log((1:length(var.names)) + 1)
       lwds = rev(2 * lwds / max(lwds))
-      
+
       vip.ggdf = cbind(classic.lambda, classic.vip.df)
       vip.ggdfL = reshape2::melt(vip.ggdf, id = "classic.lambda")
-      
+
       p = ggplot2::ggplot(
         data = vip.ggdfL,
         ggplot2::aes_string(
@@ -1037,7 +1071,7 @@ plot.vis = function(x,
           legend.key = ggplot2::element_blank(),
           legend.position = legend.position
         )
-      
+
       return(p)
     } else {
       gvis.title = "Variable inclusion plot"
@@ -1128,4 +1162,3 @@ print.vis = function (x,
   print(print.obj, row.names = FALSE)
   invisible(x)
 }
-
